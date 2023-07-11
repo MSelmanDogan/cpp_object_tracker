@@ -2,11 +2,11 @@
 
 int main(){
 
-    int minBlobArea = 100; 
-    int maxBlobArea = 1000;
+    int minBlobArea = 200; 
+    // int maxBlobArea = 1000;
     cv::VideoCapture video("./singleball.mp4");
     cv::Ptr<cv::BackgroundSubtractorMOG2> mog2 = cv::createBackgroundSubtractorMOG2();
-    cv::KalmanFilter kalmanFilter(6,2,0); // 4 states (x, y, vx, vy) 2 measurements (x,y)
+    cv::KalmanFilter kalmanFilter(6,2,0);// 4 states (x, y, vx, vy) 2 measurements (x,y)
 
     cv::Mat measurement = cv::Mat::zeros(2,1,CV_32F); // Measurement matrix
 
@@ -28,7 +28,8 @@ int main(){
 
     cv::Point2f predictedPosition;
     cv::Point2f measuredPosition;
-    bool isObjectDetected = false; // Track if the object is detected in the current frame
+    bool isObjectDetected = false; // Track if the object is detected in the current
+    // frame
     cv::Point2f previousPredictedPosition; // Store the previous predicted position
 
     if (!video.isOpened()){
@@ -42,14 +43,14 @@ int main(){
     {
         cv::Mat fgMask; // foreground mask
 
-        // Mog2 ile foreground mask hesapla 
+        // calculate foreground mask with mog2
 
         mog2->apply(frame,fgMask);
-        // Bağlantılı bileşen analizi için konturları bul
+        // Finding contours
         std::vector<std::vector<cv::Point>> contours;
         cv::findContours(fgMask, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
         isObjectDetected = false; // Reset object detection flag for each frame
-        // contourları gezerek blobları çizdir
+        // draw blobs for each contour
         for (size_t i = 0; i< contours.size(); i++){
             cv::Rect bbox = cv::boundingRect(contours[i]);
             int blobArea = bbox.width * bbox.height;
@@ -75,32 +76,33 @@ int main(){
                 measurement.at<float>(1) = static_cast<float>(measuredPosition.y);
                 kalmanFilter.correct(measurement);
                 // Draw predicted and measure position
-                // cv::circle(frame, predictedPosition, 5, cv::Scalar(255, 0, 0), -1);
+                cv::circle(frame, predictedPosition, 5, cv::Scalar(255, 255, 255), -1);
                 cv::circle(frame, measuredPosition, 5, cv::Scalar(0, 255, 255), -1);
                 previousPredictedPosition.x = kalmanFilter.statePost.at<float>(0);
                 previousPredictedPosition.y = kalmanFilter.statePost.at<float>(1);
             }
-            else{
-                // if no valid blobs are found, update Kalman Filter with 
-                // no measurement
+            // else{
+            //     // if no valid blobs are found, update Kalman Filter with 
+            //     // no measurement
 
-                kalmanFilter.predict();
-                predictedPosition.x = kalmanFilter.statePost.at<float>(0);
-                predictedPosition.y = kalmanFilter.statePost.at<float>(1);
-                cv::circle(frame, predictedPosition, 5, cv::Scalar(255, 0, 0), -1);
-            }
-        if (!isObjectDetected){
-        // If no valid blobs are found, update Kalman Filter with no measurement and continue prediction
-        kalmanFilter.predict();
-        predictedPosition.x = kalmanFilter.statePost.at<float>(0);
-        predictedPosition.y = kalmanFilter.statePost.at<float>(1);
+            //     kalmanFilter.predict();
+            //     predictedPosition.x = kalmanFilter.statePost.at<float>(0);
+            //     predictedPosition.y = kalmanFilter.statePost.at<float>(1);
+            //     cv::circle(frame, predictedPosition, 5, cv::Scalar(255, 0, 0), -1);
+            // }
+    //     if (!isObjectDetected){
+    //     // If no valid blobs are found, update Kalman Filter with no measurement 
+    //     // and continue prediction
+    //     kalmanFilter.predict();
+    //     predictedPosition.x = kalmanFilter.statePost.at<float>(0);
+    //     predictedPosition.y = kalmanFilter.statePost.at<float>(1);
 
-        // Draw predicted position using the previous predicted position
-        cv::line(frame, previousPredictedPosition, predictedPosition, cv::Scalar(255, 0, 0), 2);
+    //     // Draw predicted position using the previous predicted position
+    //     cv::line(frame, previousPredictedPosition, predictedPosition, cv::Scalar(255, 0, 0), 2);
 
-        // Update the previous predicted position with the current predicted position
-        previousPredictedPosition = predictedPosition;
-    }
+    //     // Update the previous predicted position with the current predicted position
+    //     previousPredictedPosition = predictedPosition;
+    // }
 
 
         }
@@ -109,7 +111,7 @@ int main(){
         cv::imshow("Foreground Mask", fgMask);
 
         if (cv::waitKey(600) == 27) // exit with ESC 
-        //waitkey(300) because play on slow motion to my video
+        //waitkey(300) because play on i need slow motion for my video 
             break;
 
     }
