@@ -16,15 +16,19 @@ int main(){
 
     kalmanFilter.measurementMatrix.at<float>(0) = 1.0f;
     kalmanFilter.measurementMatrix.at<float>(7) = 1.0f;
+    kalmanFilter.measurementMatrix.at<float>(16) = 1.0f;
+	kalmanFilter.measurementMatrix.at<float>(23) = 1.0f;
 
+    kalmanFilter.transitionMatrix.at<float>(2) = 1.0f; // x hızı
+    kalmanFilter.transitionMatrix.at<float>(9) = 1.0f; // y hızı
     // initialize other Kalman Filter parameters: process noise covariance, 
     // measurement noise covariance, error covariance
 
     //You can experiment with different values to get better tracking results
 
-    cv::setIdentity(kalmanFilter.processNoiseCov, cv::Scalar::all(0.1));
+    cv::setIdentity(kalmanFilter.processNoiseCov, cv::Scalar::all(1e-2));
     cv::setIdentity(kalmanFilter.measurementNoiseCov, cv::Scalar::all(1e-1));
-    cv::setIdentity(kalmanFilter.errorCovPost, cv::Scalar::all(1));
+    // cv::setIdentity(kalmanFilter.errorCovPost, cv::Scalar::all(1));
 
     cv::Point2f predictedPosition;
     cv::Point2f measuredPosition;
@@ -66,18 +70,21 @@ int main(){
                 measuredPosition.x = bbox.x + bbox.width / 2;
                 measuredPosition.y = bbox.y + bbox.height / 2;
                 isObjectDetected = true;
-                // Kalman Filter prediction step
-                cv::Mat prediction = kalmanFilter.predict();
-                predictedPosition.x = prediction.at<float>(0);
-                predictedPosition.y = prediction.at<float>(1);
 
                 // Kalman Filter update step
                 measurement.at<float>(0) = static_cast<float>(measuredPosition.x);
                 measurement.at<float>(1) = static_cast<float>(measuredPosition.y);
                 kalmanFilter.correct(measurement);
+                
+                // Kalman Filter prediction step
+                cv::Mat prediction = kalmanFilter.predict();
+                predictedPosition.x = prediction.at<float>(0);
+                predictedPosition.y = prediction.at<float>(1);
+
                 // Draw predicted and measure position
-                cv::circle(frame, predictedPosition, 5, cv::Scalar(255, 255, 255), -1);
+                
                 cv::circle(frame, measuredPosition, 5, cv::Scalar(0, 255, 255), -1);
+                cv::circle(frame, predictedPosition, 5, cv::Scalar(255, 255, 255), -1);
                 previousPredictedPosition.x = kalmanFilter.statePost.at<float>(0);
                 previousPredictedPosition.y = kalmanFilter.statePost.at<float>(1);
             }
@@ -110,7 +117,7 @@ int main(){
         cv::imshow("Frame", frame);
         cv::imshow("Foreground Mask", fgMask);
 
-        if (cv::waitKey(600) == 27) // exit with ESC 
+        if (cv::waitKey(100) == 27) // exit with ESC 
         //waitkey(300) because play on i need slow motion for my video 
             break;
 
