@@ -34,8 +34,8 @@ int main(){
     cv::Point2f measuredPosition;
     bool isObjectDetected = false; // Track if the object is detected in the current
     // frame
-    cv::Point2f previousPredictedPosition; // Store the previous predicted position
-
+    std::vector<cv::Point2f> previousMeasuredPosition; // to store measured values
+    std::vector<cv::Point2f> previousPredictedPosition; // to store predicted values
     if (!video.isOpened()){
         std::cout << "Video not oppened." << std::endl;
         return -1;
@@ -85,8 +85,15 @@ int main(){
                 
                 cv::circle(frame, measuredPosition, 5, cv::Scalar(0, 255, 255), -1);
                 cv::circle(frame, predictedPosition, 5, cv::Scalar(255, 255, 255), -1);
-                previousPredictedPosition.x = kalmanFilter.statePost.at<float>(0);
-                previousPredictedPosition.y = kalmanFilter.statePost.at<float>(1);
+
+                // Update previous positions for the next frame
+                previousMeasuredPosition.push_back(measuredPosition);
+                previousPredictedPosition.push_back(predictedPosition);
+
+                for (size_t j = 0; j < previousMeasuredPosition.size(); j++){
+                    cv::circle(frame, previousMeasuredPosition[j], 5, cv::Scalar(0, 255, 255), -1);
+                    cv::circle(frame, previousPredictedPosition[j], 5, cv::Scalar(255,255,255), -1);
+                }
             }
             // else{
             //     // if no valid blobs are found, update Kalman Filter with 
@@ -117,8 +124,8 @@ int main(){
         cv::imshow("Frame", frame);
         cv::imshow("Foreground Mask", fgMask);
 
-        if (cv::waitKey(100) == 27) // exit with ESC 
-        //waitkey(300) because play on i need slow motion for my video 
+        if (cv::waitKey(600) == 27) // exit with ESC 
+        //waitkey(600) because play on i wanna slow motion for my video 
             break;
 
     }
