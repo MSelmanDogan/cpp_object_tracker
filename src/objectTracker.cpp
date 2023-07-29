@@ -3,6 +3,7 @@
 ObjectTracker::ObjectTracker(int minBlobArea): minBlobArea(minBlobArea) {
     // ObjectTracker'ı başlatmak için gerekli işlemileri burada yap
     mog2 = cv::createBackgroundSubtractorMOG2();
+    KNN = cv::createBackgroundSubtractorKNN();
     // kalmanFilter = KalmanFilter();
     std::vector<cv::Point2f> previousMeasuredPosition; // to store measured values
     std::vector<cv::Point2f> previousPredictedPosition; // to store predicted values
@@ -22,7 +23,8 @@ void ObjectTracker::processVideo(std::string& videoPath) {
     while (video.read(frame))
     {
         cv::Mat fgMask;
-        mog2->apply(frame,fgMask);
+        // mog2->apply(frame,fgMask);
+        KNN->apply(frame, fgMask);
         std::vector<std::vector<cv::Point>> contours;
         cv::findContours(fgMask, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
         bool isObjectDetected = false; // Reset object detection flag for each frame
@@ -79,16 +81,11 @@ void ObjectTracker::processVideo(std::string& videoPath) {
                         cv::Scalar(0, 0, 255), 
                         -1);
                 }
-                std::cout << "if:" << std::endl;
             }
             else if (
                 blobArea < minBlobArea && 
                 !previousPredictedPosition.empty() && 
                 !isObjectDetected) {
-                std::cout << 
-                    "previousPredictedPosition" <<
-                    previousPredictedPosition.back() <<
-                std::endl;
                 // There is no object now, but it was here
                 isObjectDetected = true;
                 measuredPosition = previousPredictedPosition.back();

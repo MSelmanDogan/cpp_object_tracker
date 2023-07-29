@@ -12,6 +12,7 @@ public:
 private:
     int minBlobArea;
     cv::Ptr<cv::BackgroundSubtractorMOG2> mog2;
+    cv::Ptr<cv::BackgroundSubtractorKNN> KNN;
     KalmanFilter kalmanFilter;
     cv::Point2f predictedPosition;
     cv::Point2f measuredPosition;
