@@ -33,7 +33,6 @@ void ObjectTracker::processVideo(std::string& videoPath) {
             cv::Rect bbox = cv::boundingRect(contours[i]);
             int blobArea = bbox.width * bbox.height;
             if (blobArea >= minBlobArea && blobArea <= 10000) {
-                
                 isObjectDetected = true;
                 cv::drawContours(
                     frame, 
