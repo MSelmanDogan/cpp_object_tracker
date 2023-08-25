@@ -2,6 +2,7 @@
 // detections kısmını data'ya çevir for'u güncelle
 #include <opencv2/opencv.hpp>
 #include <fstream>
+#include <cassert>
 
 struct Detection {
   int classId;
@@ -19,51 +20,55 @@ cv::Mat format_yolov5(const cv::Mat &source) {
 std::vector<std::string> load_class_list() {
   std::vector<std::string> class_list;
   std::ifstream ifs("classes2.txt");
+  assert(ifs.is_open() && "Failed to open classname2.txt");
   std::string line;
   while (getline(ifs, line)) {
     class_list.push_back(line);
   }
   return class_list;
 }
+const float CONFIDENCE_THRESHOLD = 0.4;
+const float INPUT_WIDTH = 640.0;
+const float INPUT_HEIGHT = 640.0;
+const float SCORE_THRESHOLD = 0.6;
+const float NMS_THRESHOLD = 0.4;
 
 int main() {
-  const float CONFIDENCE_THRESHOLD = 0.4;
-  const float INPUT_WIDTH = 640.0;
-  const float INPUT_HEIGHT = 640.0;
-  const float SCORE_THRESHOLD = 0.6;
-  const float NMS_THRESHOLD = 0.4;
-
   cv::dnn::Net net = cv::dnn::readNet("yolov5n.onnx");
-  std::vector<cv::String> outputNames = net.getUnconnectedOutLayersNames();
 
+  cv::Mat frame;
   cv::VideoCapture video("ball.mp4");
   if (!video.isOpened()) {
     std::cout << "Video not opened." << std::endl;
     return -1;
   }
-
   std::vector<std::string> class_list = load_class_list();
-
-  std::vector<Detection> output;
+  
 
   while (true) {
-    cv::Mat frame;
-    video >> frame;
+    // video >> frame;
+    video.read(frame);
     if (frame.empty()) {
       break;
     }
-
-    cv::Mat blob = cv::dnn::blobFromImage(
-      frame, 1.0, cv::Size(INPUT_WIDTH, INPUT_HEIGHT),
-      cv::Scalar(0, 0, 0), true, false);
+    auto input_image = format_yolov5(frame);
+    cv::Mat blob;
+    const std::vector<std::string> &className = class_list;
+    cv::dnn::blobFromImage(
+      input_image, 
+      blob, 
+      1./255., 
+      cv::Size(INPUT_WIDTH, INPUT_HEIGHT), 
+      cv::Scalar(), 
+      true, 
+      false);
     net.setInput(blob);
     std::vector<cv::Mat> detections;
-    net.forward(detections, outputNames);
-    if (detections.empty()) {
-      std::cout << "No detections found." << std::endl;
-      continue;  // Sonraki kareye geç
-    }
-    auto input_image = format_yolov5(frame);
+    net.forward(detections, net.getUnconnectedOutLayersNames());
+    // if (detections.empty()) {
+    //   std::cout << "No detections found." << std::endl;
+    //   continue;  // Sonraki kareye geç
+    // }
     float x_factor = input_image.cols / INPUT_WIDTH;
     float y_factor = input_image.rows / INPUT_HEIGHT;
     
@@ -76,20 +81,16 @@ int main() {
     std::vector<float> confidences;
     std::vector<cv::Rect> boxes;
     // std::vector<Detection> detected_objects;
-
     // for (const cv::Mat& detection : detections) {
-      // std::cout << "Detection matrix size: " << detection.rows << std::endl;
     for (int i = 0; i < rows; ++i) {
       float confidence = data[4];
-      // std::cout << "Confidence: " << confidence << std::endl;
       if (confidence > CONFIDENCE_THRESHOLD) {
           float * classes_scores = data + 5;
-          cv::Mat scores(1, class_list.size(), CV_32FC1, classes_scores);
+          cv::Mat scores(1, className.size(), CV_32FC1, classes_scores);
           cv::Point class_id;
           double max_class_score;
           minMaxLoc(scores, 0, &max_class_score, 0, &class_id);
           if (max_class_score > SCORE_THRESHOLD) {
-
               confidences.push_back(confidence);
 
               class_ids.push_back(class_id.x);
@@ -111,17 +112,40 @@ int main() {
 
   }
     // }
-    
+    std::vector<Detection> output;
     std::vector<int> nms_result;
     cv::dnn::NMSBoxes(boxes, confidences, SCORE_THRESHOLD, NMS_THRESHOLD, nms_result);
     for (int i = 0; i < nms_result.size(); i++) {
-        int idx = nms_result[i];
-        Detection result;
-        result.classId = class_ids[idx];
-        result.confidence = confidences[idx];
-        result.box = boxes[idx];
-        output.push_back(result);
+      int idx = nms_result[i];
+      Detection result;
+      result.classId = class_ids[idx];
+      result.confidence = confidences[idx];
+      result.box = boxes[idx];
+      output.push_back(result);
+      // Tespiti çizdirme
     }
+    
+    // int detections = output.size();
+
+    for (int i = 0; i < output.size(); ++i){
+      auto detection = output[i];
+      auto box = detection.box;
+      auto classOfId = detection.classId;
+      const auto color = cv::Scalar(0, 255, 0);
+
+      cv::rectangle(frame, box, cv::Scalar(0, 255, 0), 3);
+      cv::rectangle(
+        frame, 
+        cv::Point(box.x, box.y - 20), 
+        cv::Point(box.x + box.width, box.y), 
+        cv::Scalar(0, 255, 0), 
+        cv::FILLED);
+
+      cv::putText(frame, class_list[classOfId].c_str(),
+                  cv::Point(box.x, box.y - 10),
+                  cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 255, 255));
+    }
+    
 
     cv::imshow("Object Detection", frame);
 
