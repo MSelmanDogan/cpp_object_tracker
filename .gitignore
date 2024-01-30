@@ -30,3 +30,7 @@
 *.exe
 *.out
 *.app
+
+src/yolov5n.onnx
+src/ball.mp4
+src/classes2.txt
